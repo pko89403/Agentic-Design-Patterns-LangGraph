@@ -44,10 +44,17 @@ llama-server --model Qwen_Qwen3-4B-Q4_K_M.gguf \
 ## 📚 튜토리얼 챕터
 
 - **Chapter 0: [ChatGPT API 스타일로 llama.cpp 서버 호출하기](./chapter0.ipynb)**
-  - `requests` 라이브러리를 사용하여 로컬 `llama.cpp` 서버와 상호작용하는 기본 방법을 배웁니다.
+  - `requests` 라이브러리를 사용하여 로컬 `llama.cpp` 서버와 상호작용하는 기본 방법을 학습합니다.
 - **Chapter 1: [프롬프트 체이닝 (Prompt Chaining)](./chapter1-prompt-chaining.ipynb)**
   - 여러 프롬프트를 연결하여 더 복잡한 작업을 수행하는 방법을 학습합니다.
 - **Chapter 2: [라우팅 (Routing)](./chapter2-routing.ipynb)**
-  - 사용자 입력이나 이전 단계의 결과에 따라 동적으로 다음 단계를 결정하는 라우팅 에이전트를 구축합니다.
+  - 사용자 입력이나 이전 단계의 결과에 따라 동적으로 다음 단계를 결정하는 라우팅 에이전트를 학습합니다.
 - **Chapter 3: [병렬화 (Parallelization)](./chapter3-parallelization.ipynb)**
-  - 여러 작업을 동시에 실행하여 에이전트의 응답 속도를 높이는 방법을 탐구합니다.
+  - 여러 작업을 동시에 실행하여 에이전트의 응답 속도를 높이는 방법을 학습합니다.
+- **Chapter 4: [리플렉션 (Reflection)](./chapter4-reflection.ipynb)**
+  - 에이전트가 자신의 출력을 검토하고 개선하는 리플렉션 패턴을 학습합니다.
+- **Chapter 5: [도구 사용 (Tool Use)](./chapter5-tool-use.ipynb)**
+  - 외부 도구를 호출하여 에이전트의 능력을 확장하는 방법을 학습합니다.
+- **Chapter 6: [플래너 (Planner)](./chapter6-planner.ipynb)**
+  - 복잡한 목표를 달성하기 위해 여러 단계를 계획하고 실행하는 플래너 패턴을 학습합니다.
+  
