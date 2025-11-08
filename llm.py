@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 import time
 import uuid
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Iterable, Sequence
 
 import requests
 import json
@@ -24,6 +24,13 @@ except Exception:  # pragma: no cover
     BaseModel = object  # type: ignore
     ValidationError = Exception  # type: ignore
     _HAS_PYDANTIC = False
+
+try:  # Optional LangChain message helpers
+    from langchain_core.messages import AIMessage  # type: ignore
+    _HAS_LANGCHAIN = True
+except Exception:  # pragma: no cover
+    AIMessage = None  # type: ignore
+    _HAS_LANGCHAIN = False
 
 # Defaults can be overridden via env vars
 DEFAULT_API_URL = os.getenv("LLM_API_URL", "http://127.0.0.1:8080/v1/chat/completions")
@@ -39,6 +46,78 @@ class LLMError(RuntimeError):
     """Raised when the LLM server returns a non-200 or an unexpected payload."""
 
 
+def _ensure_json_serializable_content(content: Any) -> Any:
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, (dict, list)):
+        try:
+            json.dumps(content)
+            return content
+        except (TypeError, ValueError):
+            return json.dumps(content, ensure_ascii=False)
+    return str(content)
+
+
+def _normalize_tool_calls_for_request(tool_calls: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    normalized: List[Dict[str, Any]] = []
+    for idx, call in enumerate(tool_calls):
+        if not isinstance(call, dict):
+            continue
+        if "function" in call and call.get("type") == "function":
+            fn = call["function"]
+            args = fn.get("arguments", "")
+            if args is not None and not isinstance(args, str):
+                fn = dict(fn)
+                fn["arguments"] = json.dumps(args, ensure_ascii=False)
+            normalized.append({"id": call.get("id", f"call_{idx}"), "type": "function", "function": fn})
+            continue
+        name = call.get("name") or call.get("function", {}).get("name")
+        if not name:
+            continue
+        args = call.get("args") or call.get("arguments") or {}
+        if not isinstance(args, str):
+            args = json.dumps(args, ensure_ascii=False)
+        normalized.append(
+            {
+                "id": call.get("id", f"call_{idx}"),
+                "type": "function",
+                "function": {"name": name, "arguments": args},
+            }
+        )
+    return normalized
+
+
+def _normalize_tool_calls_for_langchain(tool_calls: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    normalized: List[Dict[str, Any]] = []
+    for idx, call in enumerate(tool_calls):
+        if not isinstance(call, dict):
+            continue
+        if "function" in call:
+            fn = call["function"]
+            args = fn.get("arguments", {})
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args)
+                except json.JSONDecodeError:  # pragma: no cover
+                    args = {"arguments": args}
+            call_type = call.get("type") or "tool_call"
+            if call_type == "function":
+                call_type = "tool_call"
+            normalized.append(
+                {
+                    "id": call.get("id", f"call_{idx}"),
+                    "name": fn.get("name"),
+                    "args": args,
+                    "type": call_type,
+                }
+            )
+        else:
+            normalized.append(call)
+    return normalized
+
+
 def _convert_langchain_messages(messages: List[Message]) -> List[Message]:
     """Convert LangChain messages (HumanMessage/SystemMessage/AIMessage) or dicts
     into OpenAI-compatible dicts with {"role", "content"}.
@@ -46,7 +125,13 @@ def _convert_langchain_messages(messages: List[Message]) -> List[Message]:
     converted: List[Message] = []
     for m in messages:
         if isinstance(m, dict) and "role" in m and "content" in m:
-            converted.append({"role": str(m["role"]), "content": str(m["content"])})
+            msg = {"role": str(m["role"]), "content": _ensure_json_serializable_content(m.get("content"))}
+            tool_call_id = m.get("tool_call_id")
+            if tool_call_id:
+                msg["tool_call_id"] = tool_call_id
+            if "tool_calls" in m and isinstance(m["tool_calls"], list):
+                msg["tool_calls"] = _normalize_tool_calls_for_request(m["tool_calls"])
+            converted.append(msg)
             continue
         # LangChain messages expose `.type` ("human"|"ai"|"system"|"tool") and `.content`
         role = getattr(m, "type", None) or getattr(m, "role", None)
@@ -60,7 +145,18 @@ def _convert_langchain_messages(messages: List[Message]) -> List[Message]:
         elif role == "tool":
             role = "tool"
         if role and content is not None:
-            converted.append({"role": str(role), "content": str(content)})
+            msg_dict: Dict[str, Any] = {"role": str(role), "content": _ensure_json_serializable_content(content)}
+            tool_call_id = getattr(m, "tool_call_id", None)
+            if tool_call_id:
+                msg_dict["tool_call_id"] = tool_call_id
+            tool_calls = getattr(m, "tool_calls", None)
+            if tool_calls:
+                msg_dict["tool_calls"] = _normalize_tool_calls_for_request(tool_calls)
+            additional_kwargs = getattr(m, "additional_kwargs", {}) or {}
+            if role == "assistant" and "function_call" in additional_kwargs:
+                # Legacy function_call support
+                msg_dict["function_call"] = additional_kwargs["function_call"]
+            converted.append(msg_dict)
         else:
             raise ValueError(
                 "Unsupported message object. Provide dicts or LangChain HumanMessage/SystemMessage/AIMessage."
@@ -119,6 +215,32 @@ def _extract_json_obj(text: str) -> Dict[str, Any]:
     return json.loads(text)
 
 
+def _tool_to_openai_spec(tool: Any) -> Dict[str, Any]:
+    """Best-effort conversion from LangChain/BaseTool or callable to OpenAI tool spec."""
+    name = getattr(tool, "name", None) or getattr(tool, "__name__", None)
+    if not name:
+        raise ValueError("Tool must have a `name` attribute or __name__.")
+
+    description = getattr(tool, "description", None) or (getattr(tool, "__doc__", "") or "")
+    description = description.strip()
+
+    args_schema = getattr(tool, "args_schema", None)
+    parameters = None
+    if args_schema is not None:
+        parameters = _schema_to_json_schema(args_schema)
+    if not parameters:
+        parameters = {"type": "object", "properties": {}, "additionalProperties": True}
+
+    return {
+        "type": "function",
+        "function": {
+            "name": name,
+            "description": description,
+            "parameters": parameters,
+        },
+    }
+
+
 def chat(
     prompt: Optional[str] = None,
     messages: Optional[List[Message]] = None,
@@ -135,6 +257,8 @@ def chat(
     strip_think_blocks: bool = True,
     return_raw: bool = False,
     headers: Optional[Dict[str, str]] = None,
+    tools: Optional[List[Dict[str, Any]]] = None,
+    tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
 ) -> Union[str, Dict[str, Any]]:
     """Minimal, readable LLM call.
 
@@ -156,6 +280,12 @@ def chat(
 
     if logprobs is not None:
         payload["logprobs"] = logprobs
+
+    if tools:
+        payload["tools"] = tools
+
+    if tool_choice is not None:
+        payload["tool_choice"] = tool_choice
 
     req_headers = {"Content-Type": "application/json"}
     if headers:
@@ -318,14 +448,183 @@ class LocalLLM:
                 self.outer = outer
                 self.schema = schema_
 
-            def invoke(self, messages: List[Message]) -> T:
+            def invoke(
+                self,
+                input_data: Union[str, Message, List[Message]],
+                **kwargs: Any,
+            ) -> T:
+                params: Dict[str, Any] = dict(self.outer.defaults)
+                params.update(kwargs)
+
+                if isinstance(input_data, str):
+                    return chat_structured(
+                        schema=self.schema,
+                        prompt=input_data,
+                        model=self.outer.model,
+                        api_url=self.outer.api_url,
+                        **params,
+                    )
+
+                if isinstance(input_data, dict):
+                    messages: List[Message] = [input_data]
+                elif isinstance(input_data, list):
+                    messages = input_data
+                else:  # pragma: no cover - defensive for unexpected types
+                    try:
+                        messages = list(input_data)  # type: ignore[arg-type]
+                    except TypeError as exc:
+                        raise TypeError(
+                            "Invoke expects a prompt string or an iterable of messages."
+                        ) from exc
+
                 return chat_structured(
                     schema=self.schema,
                     messages=messages,
                     model=self.outer.model,
                     api_url=self.outer.api_url,
-                    **self.outer.defaults,
+                    **params,
                 )
 
         return _StructuredCaller(self, schema)
 
+    def bind_tools(
+        self,
+        tools: Sequence[Any],
+        *,
+        tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+    ):
+        if not tools:
+            raise ValueError("Provide at least one tool to bind.")
+
+        tool_specs = [_tool_to_openai_spec(tool) for tool in tools]
+        name_to_tool = {
+            spec["function"]["name"]: tool for spec, tool in zip(tool_specs, tools)
+        }
+
+        class _ToolBoundCaller:
+            def __init__(
+                self,
+                outer: "LocalLLM",
+                specs: List[Dict[str, Any]],
+                original_tools: Dict[str, Any],
+                default_tool_choice: Optional[Union[str, Dict[str, Any]]],
+            ) -> None:
+                self.outer = outer
+                self.tool_specs = specs
+                self.tools = list(original_tools.values())
+                self.tools_by_name = original_tools
+                self.tool_choice = default_tool_choice
+
+            def _prepare_messages(
+                self, data: Union[str, Message, List[Message], Iterable[Message]]
+            ) -> Dict[str, Any]:
+                if isinstance(data, str):
+                    return {"prompt": data, "messages": None}
+                if isinstance(data, dict):
+                    return {"prompt": None, "messages": [data]}
+                if isinstance(data, list):
+                    return {"prompt": None, "messages": data}
+                try:
+                    coerced = list(data)  # type: ignore[arg-type]
+                except TypeError as exc:  # pragma: no cover
+                    raise TypeError(
+                        "Invoke expects either a prompt string or an iterable of messages."
+                    ) from exc
+                return {"prompt": None, "messages": coerced}
+
+            def _to_ai_message(self, message_dict: Dict[str, Any], choice: Dict[str, Any], raw: Dict[str, Any]) -> Any:
+                content = message_dict.get("content", "")
+                if isinstance(content, list):
+                    texts: List[str] = []
+                    for part in content:
+                        if isinstance(part, dict) and part.get("type") == "text":
+                            texts.append(str(part.get("text", "")))
+                    content = "".join(texts) if texts else json.dumps(content, ensure_ascii=False)
+                elif content is None:
+                    content = ""
+
+                tool_calls_raw = list(message_dict.get("tool_calls") or [])
+                function_call = message_dict.get("function_call")
+                if function_call:
+                    tool_calls_raw.append(
+                        {
+                            "id": function_call.get("id", "call_0"),
+                            "type": "function",
+                            "function": {
+                                "name": function_call.get("name"),
+                                "arguments": function_call.get("arguments", ""),
+                            },
+                        }
+                    )
+                tool_calls = _normalize_tool_calls_for_langchain(tool_calls_raw)
+
+                additional_kwargs = {
+                    k: v
+                    for k, v in message_dict.items()
+                    if k not in {"role", "content", "tool_calls", "function_call"}
+                }
+                response_metadata = {
+                    "finish_reason": choice.get("finish_reason"),
+                    "index": choice.get("index"),
+                    "latency": raw.get("latency"),
+                }
+                if "usage" in raw:
+                    response_metadata["usage"] = raw["usage"]
+                if "model" in raw:
+                    response_metadata["model"] = raw["model"]
+
+                if _HAS_LANGCHAIN and AIMessage is not None:
+                    return AIMessage(
+                        content=content,
+                        additional_kwargs=additional_kwargs,
+                        tool_calls=tool_calls,
+                        response_metadata=response_metadata,
+                    )
+
+                result: Dict[str, Any] = dict(message_dict)
+                result["content"] = content
+                if tool_calls:
+                    result["tool_calls"] = tool_calls
+                result.setdefault("additional_kwargs", {}).update(additional_kwargs)
+                result["response_metadata"] = response_metadata
+                return result
+
+            def invoke(
+                self,
+                input_data: Union[str, Message, List[Message], Iterable[Message]],
+                *,
+                return_raw: bool = False,
+                tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
+                **kwargs: Any,
+            ) -> Any:
+                params: Dict[str, Any] = {"model": self.outer.model, "api_url": self.outer.api_url}
+                params.update(self.outer.defaults)
+                params.update(kwargs)
+
+                prepared = self._prepare_messages(input_data)
+                tc_value = tool_choice if tool_choice is not None else self.tool_choice
+
+                raw = chat(
+                    prompt=prepared["prompt"],
+                    messages=prepared["messages"],
+                    tools=self.tool_specs,
+                    tool_choice=tc_value,
+                    return_raw=True,
+                    strip_think_blocks=False,
+                    **params,
+                )
+
+                if return_raw:
+                    return raw
+
+                try:
+                    choice = raw["choices"][0]
+                    message = choice["message"]
+                except Exception as exc:  # pragma: no cover
+                    raise LLMError(f"Unexpected response format: {raw}") from exc
+
+                return self._to_ai_message(message, choice, raw)
+
+            __call__ = invoke
+
+        return _ToolBoundCaller(self, tool_specs, name_to_tool, tool_choice)

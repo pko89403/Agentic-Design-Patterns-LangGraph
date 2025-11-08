@@ -28,14 +28,16 @@ uv sync
 다음은 `Qwen_Qwen2-7B-Instruct-Q4_K_M.gguf` 모델을 예시로 한 서버 실행 명령어입니다. 모델 파일 경로와 이름은 실제 환경에 맞게 수정해주세요.
 
 ```sh
-llama-server --model Qwen_Qwen2-7B-Instruct-Q4_K_M.gguf \
+llama-server --model Qwen_Qwen3-4B-Q4_K_M.gguf \
   --port 8080 \
   --threads 4 \
   --n-gpu-layers 12 \
+  --chat-template-file qwen3-workaround.jinja \
   --ctx-size 2048 \
   --batch-size 4 \
   --reasoning-format none \
   --reasoning-budget 0 \
+  --jinja \
   --log-verbose
 ```
 
