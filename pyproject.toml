@@ -13,4 +13,5 @@ dependencies = [
     "langchain-openai>=1.0.0",
     "langgraph>=1.0.1",
     "requests>=2.32.5",
+    "tavily-python>=0.7.12",
 ]

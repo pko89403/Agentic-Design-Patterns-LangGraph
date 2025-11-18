@@ -2,7 +2,7 @@
 
 이 리포지토리는 LangChain과 LangGraph를 사용하여 에이전틱 디자인 패턴을 탐색하고 구현하는 방법을 배우는 한국인 파이썬 개발자를 위한 학습 공간입니다.
 
-각 챕터는 Jupyter Notebook으로 구성되어 있으며, 특정 디자인 패턴이나 기술을 단계별로 학습할 수 있도록 안내합니다.
+각 챕터는 Jupyter Notebook으로 구성되어 있으며, 특정 디자인 패턴이나 기술을 단계별로 학습할 수 있도록 안내합니다. 이 과정을 통해 스스로 추론하고, 학습하며, 복잡한 문제를 해결하는 자율 에이전트를 구축하는 데 필요한 핵심 원리를 익힐 수 있습니다.
 
 ## 🚀 시작하기
 
@@ -27,6 +27,7 @@ uv sync
 
 다음은 `Qwen_Qwen2-7B-Instruct-Q4_K_M.gguf` 모델을 예시로 한 서버 실행 명령어입니다. 모델 파일 경로와 이름은 실제 환경에 맞게 수정해주세요.
 
+LLM
 ```sh
 llama-server --model Qwen_Qwen3-4B-Q4_K_M.gguf \
   --port 8080 \
@@ -39,6 +40,13 @@ llama-server --model Qwen_Qwen3-4B-Q4_K_M.gguf \
   --reasoning-budget 0 \
   --jinja \
   --log-verbose
+```
+
+EMBEDDING
+```sh
+llama-server -m ./embeddinggemma-300M-q8_0.gguf \
+  --port 8081 \
+  --embeddings
 ```
 
 ## 📚 튜토리얼 챕터
@@ -57,4 +65,10 @@ llama-server --model Qwen_Qwen3-4B-Q4_K_M.gguf \
   - 외부 도구를 호출하여 에이전트의 능력을 확장하는 방법을 학습합니다.
 - **Chapter 6: [플래너 (Planner)](./chapter6-planner.ipynb)**
   - 복잡한 목표를 달성하기 위해 여러 단계를 계획하고 실행하는 플래너 패턴을 학습합니다.
-  
+- **Chapter 7: [다중 에이전트 협업 (Multi-Agent Collaboration)](./chapter7-multi-agent-collaboration.ipynb)**
+  - 여러 전문 에이전트가 협력하여 단일 에이전트의 한계를 뛰어넘는 복잡한 문제를 해결하는 방법을 학습합니다.
+- **Chapter 8: [메모리 관리 (Memory Management)](./chapter8-memory-management.ipynb)**
+  - 에이전트가 대화의 맥락을 기억하고(단기 기억), 과거의 정보를 영구적으로 저장하고 검색(장기 기억)하는 방법을 학습합니다.
+- **Chapter 9: [학습 및 적응 (Learning and Adaptation)](./chapter9-learning-and-adaptation.ipynb)**
+  - 강화 학습(PPO, DPO)과 같은 기술을 통해 에이전트가 경험으로부터 학습하고 시간이 지남에 따라 스스로 성능을 개선하는 방법을 탐구합니다.
+
