@@ -71,4 +71,10 @@ llama-server -m ./embeddinggemma-300M-q8_0.gguf \
   - 에이전트가 대화의 맥락을 기억하고(단기 기억), 과거의 정보를 영구적으로 저장하고 검색(장기 기억)하는 방법을 학습합니다.
 - **Chapter 9: [학습 및 적응 (Learning and Adaptation)](./chapter9-learning-and-adaptation.ipynb)**
   - 강화 학습(PPO, DPO)과 같은 기술을 통해 에이전트가 경험으로부터 학습하고 시간이 지남에 따라 스스로 성능을 개선하는 방법을 탐구합니다.
+- **Chapter 10: [모델 컨텍스트 프로토콜 (Model Context Protocol)](./chapter10-model-context-protocol.ipynb)**
+  - LLM이 외부 시스템, 데이터베이스, 도구와 표준화된 방식으로 상호작용할 수 있게 해주는 범용 어댑터인 MCP(Model Context Protocol)에 대해 학습합니다.
+- **Chapter 11: [목표 설정 및 모니터링 (Goal Setting and Monitoring)](./chapter11-goal-setting-and-monitoring.ipynb)**
+  - 에이전트가 명확한 목표를 설정하고, 그 목표를 달성하기 위한 진행 상황을 추적하며, 성공 여부를 스스로 평가하는 방법을 학습합니다.
+- **Chapter 12: [예외 처리 및 복구 (Exception Handling and Recovery)](./chapter12-exception-handling-and-recovery.ipynb)**
+  - 에이전트가 도구 오류, API 지연 등 예기치 않은 문제에 직면했을 때, 이를 감지하고 재시도, 대체 경로 사용 등의 전략으로 안정적으로 복구하는 방법을 학습합니다.
 
