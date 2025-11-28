@@ -77,4 +77,10 @@ llama-server -m ./embeddinggemma-300M-q8_0.gguf \
   - 에이전트가 명확한 목표를 설정하고, 그 목표를 달성하기 위한 진행 상황을 추적하며, 성공 여부를 스스로 평가하는 방법을 학습합니다.
 - **Chapter 12: [예외 처리 및 복구 (Exception Handling and Recovery)](./chapter12-exception-handling-and-recovery.ipynb)**
   - 에이전트가 도구 오류, API 지연 등 예기치 않은 문제에 직면했을 때, 이를 감지하고 재시도, 대체 경로 사용 등의 전략으로 안정적으로 복구하는 방법을 학습합니다.
+- **Chapter 13: [휴먼 인 더 루프 (Human-in-the-Loop)](./chapter13-human-in-the-loop.ipynb)**
+  - 에이전트가 스스로 해결할 수 없는 문제에 직면했을 때, 사람의 개입을 요청하고 피드백을 받아 작업을 완료하는 방법을 학습합니다.
+- **Chapter 14: [지식 검색 (Knowledge Retrieval - RAG)](./chapter14-knowledge-retrieval(rag).ipynb)**
+  - 에이전트가 외부 데이터베이스나 문서에서 정보를 검색하여 최신 정보를 바탕으로 답변을 생성하는 RAG(Retrieval-Augmented Generation) 패턴을 학습합니다.
+- **Chapter 15: [에이전트 간 통신 (Inter-Agent Communication - A2A)](./chapter15-inter-agent-communication(A2A).ipynb)**
+  - 여러 에이전트가 서로 메시지를 주고받으며 협력하여 복잡한 문제를 해결하는 방법을 학습합니다.
 
