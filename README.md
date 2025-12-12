@@ -83,4 +83,23 @@ llama-server -m ./embeddinggemma-300M-q8_0.gguf \
   - 에이전트가 외부 데이터베이스나 문서에서 정보를 검색하여 최신 정보를 바탕으로 답변을 생성하는 RAG(Retrieval-Augmented Generation) 패턴을 학습합니다.
 - **Chapter 15: [에이전트 간 통신 (Inter-Agent Communication - A2A)](./chapter15-inter-agent-communication(A2A).ipynb)**
   - 여러 에이전트가 서로 메시지를 주고받으며 협력하여 복잡한 문제를 해결하는 방법을 학습합니다.
+- **Chapter 16: [리소스 인식 최적화 (Resource-Aware Optimization)](./chapter16-resource-aware-optiimization.ipynb)**
+  - 에이전트가 작업의 비용과 이점을 평가하여 제한된 리소스(예: API 호출 수, 토큰 사용량) 내에서 최적의 결과를 도출하는 방법을 학습합니다.
+- **Chapter 17: [추론 기술 (Reasoning Techniques)](./chapter17-reasoning-techniques.ipynb)**
+  - CoT(Chain-of-Thought), ReAct(Reasoning-Action) 등과 같은 고급 추론 기술을 활용하여 에이전트가 더 복잡한 문제 해결 능력을 갖추는 방법을 탐구합니다.
+- **Chapter 18: [가드레일 및 안전 패턴 (Guardrails and Safety Patterns)](./chapter18-guardrails_safety-patterns.ipynb)**
+  - 에이전트가 유해하거나 원치 않는 행동을 하지 않도록 제한하는 안전 장치(가드레일)를 구현하는 방법을 학습합니다.
+- **Chapter 19: [평가 및 모니터링 (Evaluation and Monitoring)](./chapter19-Evaluation-and-monitoring.ipynb)**
+  - 에이전트의 성능을 정량적으로 평가하고, 운영 환경에서 지속적으로 모니터링하여 품질을 유지하는 방법을 학습합니다.
+- **Chapter 20: [우선순위 지정 (Prioritization)](./chapter20-Prioritization.ipynb)**
+  - 에이전트가 여러 작업이나 목표 중에서 중요도와 긴급성을 기준으로 우선순위를 동적으로 결정하는 방법을 학습합니다.
+- **Chapter 21: [탐색 및 발견 (Exploration and Discovery)](./chapter21-Exploration-and-Discovery.ipynb)**
+  - 에이전트가 새로운 도구, API, 정보 소스를 스스로 탐색하고 학습하여 자신의 능력을 확장해 나가는 방법을 학습합니다.
+
+## 🎓 마무리
+
+이것으로 `에이전틱 디자인 패턴과 LangGraph`의 모든 챕터가 마무리되었습니다. 이 튜토리얼을 통해 에이전트 설계의 핵심 원리를 이해하고, LangGraph를 사용하여 직접 구현하는 경험을 쌓으셨기를 바랍니다.
+
+앞으로도 LLM과 에이전트 기술은 계속 발전할 것입니다. 여기에 소개된 패턴들을 기반으로 여러분만의 창의적인 아이디어를 더해 더욱 강력하고 지능적인 에이전트를 만들어보세요.
+
 
